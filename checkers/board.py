@@ -108,22 +108,20 @@ class Board:
     def arrange_diag_to_capture(self, piece,k):
         diags = self.get_piece_diag(piece.row, piece.col)
         
-        if k==-1:
-            if piece.color == WHITE:
-                for i, diag in enumerate(diags):
-                    diags[i] = diag[::-1]
-
-            for i, diag in enumerate(diags):
-                piece_index = diag.index(piece)
-                diags[i] = diag[piece_index:]
-        else:
-            if  k==0:
-                for i, diag in enumerate(diags): 
-                    diags[i] = diag[::-1]
-            for i, diag in enumerate(diags):
-                piece_index = diag.index(piece)
-                diags[i] = diag[piece_index:]
+        if k==-1 and piece.color == WHITE:
             
+            for i, diag in enumerate(diags):
+                diags[i] = diag[::-1]
+
+        if  k==0:
+            for i, diag in enumerate(diags): 
+                diags[i] = diag[::-1]
+            
+        
+        for i, diag in enumerate(diags):
+            piece_index = diag.index(piece)
+            diags[i] = diag[piece_index:]
+        
             
             
         return diags
@@ -139,7 +137,71 @@ class Board:
         if piece.color == BLACK:
             self.black_left-=1
         else:
-            self.white_left-=1   
+            self.white_left-=1 
+    def check_no_front_piece(self,piece,valid_moves,i,k):
+
+        if not piece.king:
+            valid_moves.append([i])
+        else:
+            valid_moves.append([k,i//2])
+        return valid_moves
+    def arrange_ennemy_king_status(self,infront_piece,piece,i,k):
+        if piece.king:
+            ennemy_diag=self.arrange_diag_to_capture(infront_piece,k)[i//2]
+        else:
+            ennemy_diag=self.arrange_diag_to_capture(infront_piece,-1)[i]
+        return ennemy_diag
+    def get_piece_to_capture(self,piece,ennemy_piece,back_piece,i,k,valid_moves):
+        if back_piece==0:
+            if not piece.king:
+                valid_moves.append([i,ennemy_piece])
+            else:
+                valid_moves.append([k,i//2,ennemy_piece])
+        return valid_moves
+        
+                                    
+    def extract_possible_moves(self,diags,piece,valid_moves):
+        for i,diag in enumerate(diags):
+            k=i%2
+            ally_iterator=iter(diag)
+            
+            next(ally_iterator)
+            for _ in diag:
+                    try:
+                        infront_piece = next(ally_iterator)
+                        
+                    except StopIteration:
+                        
+                        break
+                    
+                    if infront_piece ==0 :
+                        valid_moves.extend(self.check_no_front_piece(piece,valid_moves,i,k))
+                        break
+                    elif infront_piece.color == piece.color:
+                        break
+                    else:
+                        #make this a function in order to handle double jump 
+                        ennemy_diag=self.arrange_ennemy_king_status(infront_piece,piece,i,k)
+                        
+                        try:
+                            ennemy_iterator=iter(ennemy_diag)
+                            
+                            ennemy_piece=next(ennemy_iterator)
+                            back_piece= next(ennemy_iterator)
+                            
+                            
+                            valid_moves.extend(self.get_piece_to_capture(piece,ennemy_piece,back_piece,i,k,valid_moves))
+                            
+                            break
+                                
+                                    
+                                
+                            
+                            
+                        
+                        except StopIteration:
+                            
+                            break   
     def possible_moves(self,piece):
         valid_moves=[]
         try:
@@ -150,64 +212,49 @@ class Board:
         except AttributeError:
             
             return None
-        for i,diag in enumerate(diags):
-            k=i%2
-            ally_iterator=iter(diag)
-            
-            next(ally_iterator)
-            for _ in diag:
-                try:
-                    infront_piece = next(ally_iterator)
-                    
-                except StopIteration:
-                    
-                    break
-                
-                if infront_piece ==0 :
-                    if not piece.king:
-                        valid_moves.append([i])
-                    else:
-                        valid_moves.append([k,i//2])
-                    break
-                elif infront_piece.color == piece.color:
-                    break
-                else:
-                    #make this a function in order to handle double jump 
-                    if piece.king:
-                        ennemy_diag=self.arrange_diag_to_capture(infront_piece,k)[i//2]
-                    else:
-                        ennemy_diag=self.arrange_diag_to_capture(infront_piece,-1)[i]
-                    
-                    try:
-                       ennemy_iterator=iter(ennemy_diag)
-                      
-                       ennemy_piece=next(ennemy_iterator)
-                       back_piece= next(ennemy_iterator)
-                       
-                    
-                       if back_piece==0:
-                            if not piece.king:
-                               valid_moves.append([i,ennemy_piece])
-                            else:
-                               valid_moves.append([k,i//2,ennemy_piece])
-                            break
-                            
-                            
-                           
-                       else:
-                           break
-                       
-                    except StopIteration:
-                        
-                        break   
-                    
+        self.extract_possible_moves(diags,piece,valid_moves)
+        return valid_moves            
                     
                    
                     
-
+    def choose_valid_piece(self,piece,move):
+        if piece.king:
+            if len(move)==2:
+                piecee=piece
+                self.to_capture=False  
+            else:
+                piecee=move[2]     
+        else:
+                if len(move)==1:
+                    piecee=piece
+                    self.to_capture=False
+                else:
+                    piecee=move[1]
+                    self.to_capture=True
+        return piecee
+    def king_movement(self,row,col,move):
+        
+        if (move[0] ==0):#moving_up
+            row=row -1
+            if (move[1]==0):#left
+                col=col-1
+            else: #right
+                col=col+1
+        else:#buttom
+            row=row +1
+            if (move[1]==1):#left
+                col=col-1
+            else: #right
+                col=col+1
+        return row,col
+    def normal_piece_movement(self,row,col,color,move):
+        
+        if (move[0]==0 and color == BLACK) or (move[0]==1 and color == WHITE): 
+            col-=1
             
-        return valid_moves
-
+        else:
+            col+=1    
+        return row ,col
     def get_valid_moves_position(self,piece):
         moves=self.possible_moves(piece)
         positions={}
@@ -215,46 +262,27 @@ class Board:
     
         for move in moves:
             
-            if len (move )==1 or (piece.king and len(move)==2):
-                piecee=piece
-                self.to_capture=False
-            else:
-                if piece.king:
-                    piecee=move[2]
-                else:
-                    piecee=move[1]
-                self.to_capture=True
+            piecee=self.choose_valid_piece(piece,move)
+            
             col=piecee.col
-            if not piece.king:
-                row=self.color_row(piecee)
-                if (move[0]==0 and piece.color == BLACK) or (move[0]==1 and piece.color == WHITE): 
-                    col-=1
-                    
-                else:
-                    col+=1
-                   
-                        
-                
+            if piece.king:
+                row=piecee.row
+                row,col=self.king_movement(row,col,move)
+               
             else:
-                if (move[0] ==0):#moving_up
-                    row=piecee.row -1
-                    if (move[1]==0):#left
-                        col=col-1
-                    else: #right
-                        col=col+1
-                else:#buttom
-                    row=piecee.row +1
-                    if (move[1]==1):#left
-                        col=col-1
-                    else: #right
-                        col=col+1
-                
+                row=self.color_row(piecee)
+                row,col=self.normal_piece_movement(row,col,piece.color,move)
                    
-                    
             if self.to_capture:
                 positions[(row,col)]=piecee
             else:
                 positions[(row,col)]=None
+                        
+                
+                
+                
+                   
+                    
            
     
                             

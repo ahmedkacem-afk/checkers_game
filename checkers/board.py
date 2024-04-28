@@ -6,6 +6,7 @@ class Board:
     def __init__(self):
         self.board=[]
         self.to_capture=False
+        self.double_jump=False
         self.black_left=self.white_left=12
         self.black_kings=self.white_kings=0
         self.create_board()
@@ -104,6 +105,7 @@ class Board:
         
         
         return diags
+    
         
     def arrange_diag_to_capture(self, piece,k):
         diags = self.get_piece_diag(piece.row, piece.col)
@@ -138,13 +140,13 @@ class Board:
             self.black_left-=1
         else:
             self.white_left-=1 
-    def check_no_front_piece(self,piece,valid_moves,i,k):
+    def no_front_piece(self,piece,valid_moves,i,k):
 
         if not piece.king:
             valid_moves.append([i])
         else:
             valid_moves.append([k,i//2])
-        return valid_moves
+        
     def arrange_ennemy_king_status(self,infront_piece,piece,i,k):
         if piece.king:
             ennemy_diag=self.arrange_diag_to_capture(infront_piece,k)[i//2]
@@ -159,7 +161,8 @@ class Board:
                 valid_moves.append([k,i//2,ennemy_piece])
         return valid_moves
         
-                                    
+   
+                                           
     def extract_possible_moves(self,diags,piece,valid_moves):
         for i,diag in enumerate(diags):
             k=i%2
@@ -174,34 +177,41 @@ class Board:
                         
                         break
                     
-                    if infront_piece ==0 :
-                        valid_moves.extend(self.check_no_front_piece(piece,valid_moves,i,k))
+                    if infront_piece ==0  :
+                        self.no_front_piece(piece,valid_moves,i,k)
                         break
+                        
+                        
+                            
                     elif infront_piece.color == piece.color:
                         break
                     else:
                         #make this a function in order to handle double jump 
-                        ennemy_diag=self.arrange_ennemy_king_status(infront_piece,piece,i,k)
                         
+                        ennemy_diag=self.arrange_ennemy_king_status(infront_piece,piece,i,k)#if king i//2 represents left or right and k=i%2 represents up or down 
+                        
+                        #if not i represents left or right depending on the color 
                         try:
                             ennemy_iterator=iter(ennemy_diag)
                             
                             ennemy_piece=next(ennemy_iterator)
                             back_piece= next(ennemy_iterator)
                             
+                            self.get_piece_to_capture(piece,ennemy_piece,back_piece,i,k,valid_moves)
                             
-                            valid_moves.extend(self.get_piece_to_capture(piece,ennemy_piece,back_piece,i,k,valid_moves))
                             
+                                
+                                
                             break
                                 
+                        except StopIteration:
+                            
+                            break   
                                     
                                 
                             
                             
-                        
-                        except StopIteration:
-                            
-                            break   
+                     
     def possible_moves(self,piece):
         valid_moves=[]
         try:
@@ -223,7 +233,8 @@ class Board:
                 piecee=piece
                 self.to_capture=False  
             else:
-                piecee=move[2]     
+                piecee=move[2]   
+                self.to_capture=True  
         else:
                 if len(move)==1:
                     piecee=piece
@@ -259,7 +270,7 @@ class Board:
         moves=self.possible_moves(piece)
         positions={}
         
-    
+        
         for move in moves:
             
             piecee=self.choose_valid_piece(piece,move)
@@ -278,6 +289,9 @@ class Board:
             else:
                 positions[(row,col)]=None
                         
+        return positions
+    
+        
                 
                 
                 
@@ -287,10 +301,9 @@ class Board:
     
                             
                 
-        return positions
                     
     def evaluate(self):
-        return self.white_left - self.red_left + (self.white_kings * 0.5 - self.red_kings * 0.5)
+        return self.white_left - self.black_left + (self.white_kings * 0.5 - self.black_kings * 0.5)
 
     def get_all_pieces(self, color):
         pieces = []
@@ -301,9 +314,9 @@ class Board:
         return pieces
    
     def winner(self):
-        if self.black_left <= 0:
+        if self.black_left <= 0 or  all( not self.get_valid_moves_position(piece) for piece in self.get_all_pieces(BLACK)):
             return WHITE
-        elif self.white_left <= 0:
+        elif self.white_left <= 0 or  all( not self.get_valid_moves_position(piece) for piece in self.get_all_pieces(WHITE)):
             return BLACK
         
         return None             
@@ -315,7 +328,6 @@ class Board:
             
         else:
             return piece.row +1      
-    
                  
      
                         
@@ -323,3 +335,59 @@ class Board:
                 
                 
         
+#     def arrange_diag_to_double_jump(self,piece,row,col,k):
+#         diags = self.get_piece_diag(row, col)
+        
+#         for i, diag in enumerate(diags):
+#             if i==0 or k==0:
+#                 piece_index = min(row,col)
+                
+#             else:
+#                 piece_index = min(row,COLS-col-1)
+#             print(f"{piece_index}**************{diag[piece_index]}") 
+#             if piece.color == WHITE or k == 0:
+#                 diags[i] = diag[:piece_index]
+#                 diags[i]=diags[i][::-1]
+#             else:
+               
+#                 diags[i] = diag[piece_index:]
+        
+
+        
+            
+#             #diags[i] = diag[piece_index:]
+            
+            
+            
+#         return diags
+            
+#     def arrange_double_jump_king_status(self,infront_piece,row,col,king,k):
+#         if king:
+#             ennemy_diags=self.arrange_diag_to_double_jump(infront_piece,row,col,k)
+#         else:
+#             ennemy_diags=self.arrange_diag_to_double_jump(infront_piece,row,col,-1)
+#         return ennemy_diags
+#     def get_row_col_double_jump(self,infront_piece,move,piece):
+#         if piece.king:
+#             row,col=self.king_movement(infront_piece.row,infront_piece.col,move)
+#         else:
+#             row=self.color_row(infront_piece)
+#             row,col=self.normal_piece_movement(row,infront_piece.col,piece.color,move) 
+#         return row,col
+
+#  def check_for_double_jump(self,piece1,piece2,color):
+#         if piece1 == 0 and piece2 !=0 and piece2.color != color:
+#             self.double_jump=True
+#         else:
+#             self.double_jump=False
+#         return self.double_jump
+            
+            
+# if valid_moves:
+#                                 move=valid_moves[-1]
+#                                 print(f"{move}*************\n")
+#                                 row,col=self.get_row_col_double_jump(ennemy_piece,move,piece)
+#                                 print(f"{row},,,,,,,,,,,,,,,,,,,,,,,,,,{col}\n")
+#                                 double_jump=self.arrange_diag_to_double_jump(ennemy_piece,row,col,k)
+#                                 print(double_jump)
+                            

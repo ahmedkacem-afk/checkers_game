@@ -9,7 +9,7 @@ class Game:
     
     def update(self):
         self.board.draw(self.win)
-        self.draw_valid_moves()
+        self.draw_valid_moves(self.valid_moves)
         pygame.display.update()
 
     def _init(self):
@@ -18,8 +18,7 @@ class Game:
         self.turn = BLACK
         self.valid_moves = {}
 
-    def winner(self):
-        return self.board.winner()
+   
 
     def reset(self):
         self._init()
@@ -56,8 +55,8 @@ class Game:
 
         return True
 
-    def draw_valid_moves(self):
-        for move in self.valid_moves:
+    def draw_valid_moves(self,moves):
+        for move in moves:
             row, col = move
             pygame.draw.circle(self.win, BLUE, (col * SQUARE_SIZE + SQUARE_SIZE//2, row * SQUARE_SIZE + SQUARE_SIZE//2), 15)
 

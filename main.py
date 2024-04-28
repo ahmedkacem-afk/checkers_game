@@ -1,47 +1,49 @@
 import pygame
-from checkers.constants import WIDTH, HEIGHT
-from checkers.board import Board
+from checkers.constants import WIDTH, HEIGHT, SQUARE_SIZE, WHITE
 from checkers.game import Game
-import random as rd
-FPS=60
-WIN= pygame.display.set_mode((WIDTH,HEIGHT))
+from minimax.Ai_algorithm import minimax ,get_all_moves
+
+FPS = 60
+
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Checkers')
 
+def get_row_col_from_mouse(pos):
+    x, y = pos
+    row = y // SQUARE_SIZE
+    col = x // SQUARE_SIZE
+    return row, col
 
 def main():
-    run=True
-    game=Game(WIN)
+    run = True
     clock = pygame.time.Clock()
-    piece1=game.board.get_piece(2,5)
-    piece2=game.board.get_piece(1,4)
-    piece3=game.board.get_piece(5,2)
-    piece1.king=True
-    game.board.move(piece2,4,1)
-    game.board.move(piece3,3,2)
-    game.update()
+    game = Game(WIN)
+
     while run:
         clock.tick(FPS)
-        for event in pygame.event.get():
-            if game.board.winner()!=None :
-                print(game.winner())
-                run=False
+        
+        if game.turn == WHITE:
             
-                
-                   
-            if event.type == pygame.QUIT:
-                run=False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                pos=pygame.mouse.get_pos()
-                row,col=game.board.get_row_col_from_mouse(pos)
-                piece=game.board.get_piece(row,col)
-                
-                
-                
-                game.select(row,col)
-               
-        game.update()
-    pygame.quit()
-    
-main()
+            
+            for board in get_all_moves(game.get_board(),WHITE,game):
+                value, new_board = minimax(board, 4, WHITE, game)
+                print(value)
+            game.ai_move(new_board)
 
+        if game.board.winner() != None:
+            run=False
+            
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                row, col = get_row_col_from_mouse(pos)
+                game.select(row, col)
+
+        game.update()
     
+    pygame.quit()
+
+main()
